@@ -611,7 +611,11 @@ Blockly.Workspace.prototype.undo = function(redo) {
   Blockly.Events.recordUndo = false;
   try {
     for (var i = 0, event; (event = events[i]); i++) {
-      event.run(redo);
+      if(event.type === Blockly.Events.MOVE){
+        event.runUndo(redo);
+      } else {
+        event.run(redo);
+      }
     }
   } finally {
     Blockly.Events.recordUndo = true;

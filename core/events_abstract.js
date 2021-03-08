@@ -89,6 +89,16 @@ Blockly.Events.Abstract.prototype.run = function(_forward) {
 };
 
 /**
+ * Run an event - specifically for undo procees to add identifiable undo attributes
+ * to the Event
+ * @param {boolean} _forward True if run forward, false if run backward (undo).
+ */
+Blockly.Events.Abstract.prototype.runUndo = function(_forward) {
+  // Defined by subclasses.
+};
+
+
+/**
  * Get workspace the event belongs to.
  * @return {!Blockly.Workspace} The workspace the event belongs to.
  * @throws {Error} if workspace is null.

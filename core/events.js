@@ -228,6 +228,9 @@ Blockly.Events.filter = function(queueIn, forward) {
         lastEvent.newParentId = event.newParentId;
         lastEvent.newInputName = event.newInputName;
         lastEvent.newCoordinate = event.newCoordinate;
+        if(event.isUndoOrRedo){
+          lastEvent.isUndoOrRedo = event.isUndoOrRedo;
+        }
         lastEntry.index = i;
       } else if (event.type == Blockly.Events.CHANGE &&
           event.element == lastEvent.element &&

@@ -538,6 +538,55 @@ Blockly.Events.Move.prototype.run = function(forward) {
   }
 };
 
+/**
+ * Run a move event. Specifically for undo procees to add identifiable undo attributes
+ * to the Event
+ * @param {boolean} forward True if run forward, false if run backward (undo).
+ */
+Blockly.Events.Move.prototype.runUndo = function(forward) {
+  var workspace = this.getEventWorkspace_();
+  var block = workspace.getBlockById(this.blockId);
+  if (!block) {
+    console.warn("Can't move non-existent block: " + this.blockId);
+    return;
+  }
+  var parentId = forward ? this.newParentId : this.oldParentId;
+  var inputName = forward ? this.newInputName : this.oldInputName;
+  var coordinate = forward ? this.newCoordinate : this.oldCoordinate;
+  var parentBlock = null;
+  if (parentId) {
+    parentBlock = workspace.getBlockById(parentId);
+    if (!parentBlock) {
+      console.warn("Can't connect to non-existent block: " + parentId);
+      return;
+    }
+  }
+  if (block.getParent()) {
+    block.unplug();
+  }
+  if (coordinate) {
+    var xy = block.getRelativeToSurfaceXY();
+    block.moveByUndo(coordinate.x - xy.x, coordinate.y - xy.y);
+  } else {
+    var blockConnection = block.outputConnection || block.previousConnection;
+    var parentConnection;
+    if (inputName) {
+      var input = parentBlock.getInput(inputName);
+      if (input) {
+        parentConnection = input.connection;
+      }
+    } else if (blockConnection.type == Blockly.PREVIOUS_STATEMENT) {
+      parentConnection = parentBlock.nextConnection;
+    }
+    if (parentConnection) {
+      blockConnection.connect(parentConnection);  
+    } else {
+      console.warn("Can't connect to non-existent input: " + inputName);
+    }
+  }
+};
+
+
 Blockly.registry.register(Blockly.registry.Type.EVENT, Blockly.Events.CREATE,
     Blockly.Events.Create);
 Blockly.registry.register(Blockly.registry.Type.EVENT, Blockly.Events.DELETE,
