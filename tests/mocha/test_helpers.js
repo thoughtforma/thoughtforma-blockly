@@ -21,25 +21,6 @@ function assertVariableValues(container, name, type, id) {
 }
 
 /**
- * Captures the strings sent to console.warn() when calling a function.
- * @param {function} innerFunc The function where warnings may called.
- * @return {string[]} The warning messages (only the first arguments).
- */
-function captureWarnings(innerFunc) {
-  var msgs = [];
-  var nativeConsoleWarn = console.warn;
-  try {
-    console.warn = function(msg) {
-      msgs.push(msg);
-    };
-    innerFunc();
-  } finally {
-    console.warn = nativeConsoleWarn;
-  }
-  return msgs;
-}
-
-/**
  * Asserts that the given function logs the provided warning messages.
  * @param {function} innerFunc The function to call.
  * @param {Array<!RegExp>|!RegExp} messages A list of regex for the expected
@@ -49,7 +30,7 @@ function assertWarnings(innerFunc, messages) {
   if (!Array.isArray(messages)) {
     messages = [messages];
   }
-  var warnings = captureWarnings(innerFunc);
+  var warnings = testHelpers.captureWarnings(innerFunc);
   chai.assert.lengthOf(warnings, messages.length);
   messages.forEach((message, i) => {
     chai.assert.match(warnings[i], message);
@@ -341,16 +322,17 @@ function isXmlProperty_(key) {
 
 /**
  * Asserts that the given event has the expected values.
- * @param {!Blockly.Event.Abstract} event The event to check.
+ * @param {!Blockly.Events.Abstract} event The event to check.
  * @param {string} expectedType Expected type of event fired.
  * @param {string} expectedWorkspaceId Expected workspace id of event fired.
- * @param {string} expectedBlockId Expected block id of event fired.
+ * @param {?string} expectedBlockId Expected block id of event fired.
  * @param {!Object<string, *>} expectedProperties Map of of additional expected
  *    properties to check on fired event.
+ * @param {boolean=} [isUiEvent=false] Whether the event is a UI event.
  * @param {string=} message Optional message to prepend assert messages.
  */
 function assertEventEquals(event, expectedType,
-    expectedWorkspaceId, expectedBlockId, expectedProperties, message) {
+    expectedWorkspaceId, expectedBlockId, expectedProperties, isUiEvent = false, message) {
   var prependMessage = message ? message + ' ' : '';
   prependMessage += 'Event fired ';
   chai.assert.equal(event.type, expectedType,
@@ -375,6 +357,11 @@ function assertEventEquals(event, expectedType,
           prependMessage + key);
     }
   });
+  if (isUiEvent) {
+    chai.assert.isTrue(event.isUiEvent);
+  } else {
+    chai.assert.isFalse(event.isUiEvent);
+  }
 }
 
 /**
@@ -529,7 +516,12 @@ function createTestBlock() {
     rendered: false,
     workspace: {
       rendered: false
-    }
+    },
+    'isShadow': function() {
+      return false;
+    },
+    'renameVarById': Blockly.Block.prototype.renameVarById,
+    'updateVarName': Blockly.Block.prototype.updateVarName,
   };
 }
 
@@ -563,6 +555,43 @@ function dispatchPointerEvent(target, type, properties) {
   const event = new PointerEvent(type, eventInitDict);
   target.dispatchEvent(event);
 }
+
+/**
+ * Creates a key down event used for testing.
+ * @param {number} keyCode The keycode for the event. Use Blockly.utils.KeyCodes enum.
+ * @param {string} type The type of the target. This only matters for the
+ *     Blockly.utils.isTargetInput method.
+ * @param {Array<number>} modifiers A list of modifiers. Use Blockly.utils.KeyCodes enum.
+ * @return {{keyCode: *, getModifierState: (function(): boolean),
+ *     preventDefault: preventDefault, target: {type: *}}} The mocked keydown event.
+ */
+function createKeyDownEvent(keyCode, type, modifiers) {
+  var event = {
+    keyCode: keyCode,
+    target: {type: type},
+    getModifierState: function(name) {
+      if (name == 'Shift' && this.shiftKey) {
+        return true;
+      } else if (name == 'Control' && this.ctrlKey) {
+        return true;
+      } else if (name == 'Meta' && this.metaKey) {
+        return true;
+      } else if (name == 'Alt' && this.altKey) {
+        return true;
+      }
+      return false;
+    },
+    preventDefault: function() {}
+  };
+  if (modifiers && modifiers.length > 0) {
+    event.altKey = modifiers.indexOf(Blockly.utils.KeyCodes.ALT) > -1;
+    event.ctrlKey = modifiers.indexOf(Blockly.utils.KeyCodes.CTRL) > -1;
+    event.metaKey = modifiers.indexOf(Blockly.utils.KeyCodes.META) > -1;
+    event.shiftKey = modifiers.indexOf(Blockly.utils.KeyCodes.SHIFT) > -1;
+  }
+  return event;
+}
+
 
 /**
  * Simulates mouse click by triggering relevant mouse events.

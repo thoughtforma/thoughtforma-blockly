@@ -365,7 +365,7 @@ Blockly.Constants.Logic.CONTROLS_IF_MUTATOR_MIXIN = {
     var valueConnections = [null];
     var statementConnections = [null];
     var elseStatementConnection = null;
-    while (clauseBlock) {
+    while (clauseBlock && !clauseBlock.isInsertionMarker()) {
       switch (clauseBlock.type) {
         case 'controls_if_elseif':
           this.elseifCount_++;
@@ -473,9 +473,9 @@ Blockly.Constants.Logic.CONTROLS_IF_MUTATOR_MIXIN = {
   },
   /**
    * Reconnects child blocks.
-   * @param {!Array.<?Blockly.RenderedConnection>} valueConnections List of
+   * @param {!Array<?Blockly.RenderedConnection>} valueConnections List of
    * value connections for 'if' input.
-   * @param {!Array.<?Blockly.RenderedConnection>} statementConnections List of
+   * @param {!Array<?Blockly.RenderedConnection>} statementConnections List of
    * statement connections for 'do' input.
    * @param {?Blockly.RenderedConnection} elseStatementConnection Statement
    * connection for else input.

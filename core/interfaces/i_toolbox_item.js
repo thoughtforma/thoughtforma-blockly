@@ -26,7 +26,7 @@ Blockly.IToolboxItem = function() {};
 
 /**
  * Initializes the toolbox item.
- * This includes creating the dom and updating the state of any items based
+ * This includes creating the DOM and updating the state of any items based
  * on the info object.
  * @return {void}
  * @public
@@ -42,7 +42,7 @@ Blockly.IToolboxItem.prototype.getDiv;
 
 /**
  * Gets a unique identifier for this toolbox item.
- * @return {string} The id for the toolbox item.
+ * @return {string} The ID for the toolbox item.
  * @public
  */
 Blockly.IToolboxItem.prototype.getId;
@@ -112,6 +112,15 @@ Blockly.ISelectableToolboxItem.prototype.getContents;
  * @public
  */
 Blockly.ISelectableToolboxItem.prototype.setSelected;
+
+/**
+ * Gets the HTML element that is clickable.
+ * The parent toolbox element receives clicks. The parent toolbox will add an ID
+ * to this element so it can pass the onClick event to the correct toolboxItem.
+ * @return {!Element} The HTML element that receives clicks.
+ * @public
+ */
+Blockly.ISelectableToolboxItem.prototype.getClickTarget;
 
 /**
  * Handles when the toolbox item is clicked.

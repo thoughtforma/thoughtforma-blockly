@@ -34,10 +34,9 @@ suite('Gesture', function() {
     chai.assert.isTrue(isFieldClickSpy.alwaysReturned(isFieldClick));
 
 
-    assertEventFired(eventsFireStub, Blockly.Events.Ui,
-        {element: 'selected', oldValue: null, newValue: block.id},
-        fieldWorkspace.id, null);
-    assertEventNotFired(eventsFireStub, Blockly.Events.Ui, {element: 'click'});
+    assertEventFired(eventsFireStub, Blockly.Events.Selected,
+        {oldElementId: null, newElementId: block.id}, fieldWorkspace.id);
+    assertEventNotFired(eventsFireStub, Blockly.Events.Click, {});
   }
 
   function getTopFlyoutBlock(flyout) {
@@ -88,17 +87,5 @@ suite('Gesture', function() {
 
     var block = getTopFlyoutBlock(flyout);
     testGestureIsFieldClick(block, true, this.eventsFireStub);
-  });
-
-  test('Shift click in accessibility mode - moves the cursor', function() {
-    this.workspace.keyboardAccessibilityMode = true;
-
-    var eventTarget = this.workspace.svgGroup_;
-    simulateClick(eventTarget, {shiftKey: true});
-
-    var cursor = this.workspace.getCursor();
-    var cursorNode = cursor.getCurNode();
-    chai.assert.exists(cursorNode);
-    chai.assert.equal(cursorNode.getType(), Blockly.ASTNode.types.WORKSPACE);
   });
 });

@@ -14,24 +14,35 @@
 
 goog.provide('Blockly.Field');
 
+goog.require('Blockly.browserEvents');
+goog.require('Blockly.DropDownDiv');
 goog.require('Blockly.Events');
+/** @suppress {extraRequire} */
 goog.require('Blockly.Events.BlockChange');
+/** @suppress {extraRequire} */
 goog.require('Blockly.Gesture');
+goog.require('Blockly.IASTNodeLocationSvg');
+goog.require('Blockly.IASTNodeLocationWithBlock');
+goog.require('Blockly.IKeyboardAccessible');
+goog.require('Blockly.IRegistrable');
+goog.require('Blockly.MarkerManager');
 goog.require('Blockly.Tooltip');
 goog.require('Blockly.utils');
-goog.require('Blockly.utils.deprecation');
 goog.require('Blockly.utils.dom');
 goog.require('Blockly.utils.Rect');
 goog.require('Blockly.utils.Size');
 goog.require('Blockly.utils.style');
 goog.require('Blockly.utils.Svg');
 goog.require('Blockly.utils.userAgent');
+goog.require('Blockly.WidgetDiv');
 
+goog.requireType('Blockly.Block');
 goog.requireType('Blockly.blockRendering.ConstantProvider');
-goog.requireType('Blockly.IASTNodeLocationSvg');
-goog.requireType('Blockly.IASTNodeLocationWithBlock');
-goog.requireType('Blockly.IBlocklyActionable');
-goog.requireType('Blockly.IRegistrable');
+goog.requireType('Blockly.BlockSvg');
+goog.requireType('Blockly.Input');
+goog.requireType('Blockly.ShortcutRegistry');
+goog.requireType('Blockly.utils.Coordinate');
+goog.requireType('Blockly.WorkspaceSvg');
 
 
 /**
@@ -46,7 +57,7 @@ goog.requireType('Blockly.IRegistrable');
  * @constructor
  * @implements {Blockly.IASTNodeLocationSvg}
  * @implements {Blockly.IASTNodeLocationWithBlock}
- * @implements {Blockly.IBlocklyActionable}
+ * @implements {Blockly.IKeyboardAccessible}
  * @implements {Blockly.IRegistrable}
  */
 Blockly.Field = function(value, opt_validator, opt_config) {
@@ -126,7 +137,7 @@ Blockly.Field = function(value, opt_validator, opt_config) {
 
   /**
    * Mouse down event listener data.
-   * @type {?Blockly.EventData}
+   * @type {?Blockly.browserEvents.Data}
    * @private
    */
   this.mouseDownWrapper_ = null;
@@ -376,9 +387,8 @@ Blockly.Field.prototype.createTextElement_ = function() {
  */
 Blockly.Field.prototype.bindEvents_ = function() {
   Blockly.Tooltip.bindMouseEvents(this.getClickTarget_());
-  this.mouseDownWrapper_ =
-      Blockly.bindEventWithChecks_(
-          this.getClickTarget_(), 'mousedown', this, this.onMouseDown_);
+  this.mouseDownWrapper_ = Blockly.browserEvents.conditionalBind(
+      this.getClickTarget_(), 'mousedown', this, this.onMouseDown_);
 };
 
 /**
@@ -414,7 +424,7 @@ Blockly.Field.prototype.dispose = function() {
   Blockly.Tooltip.unbindMouseEvents(this.getClickTarget_());
 
   if (this.mouseDownWrapper_) {
-    Blockly.unbindEvent_(this.mouseDownWrapper_);
+    Blockly.browserEvents.unbind(this.mouseDownWrapper_);
   }
 
   Blockly.utils.dom.removeNode(this.fieldGroup_);
@@ -526,58 +536,10 @@ Blockly.Field.prototype.setValidator = function(handler) {
 
 /**
  * Gets the validation function for editable fields, or null if not set.
- * @return {Function} Validation function, or null.
+ * @return {?Function} Validation function, or null.
  */
 Blockly.Field.prototype.getValidator = function() {
   return this.validator_;
-};
-
-/**
- * Validates a change.  Does nothing.  Subclasses may override this.
- * @param {string} text The user's text.
- * @return {string} No change needed.
- * @deprecated May 2019. Override doClassValidation and other relevant 'do'
- *  functions instead.
- */
-Blockly.Field.prototype.classValidator = function(text) {
-  Blockly.utils.deprecation.warn(
-      'Field.prototype.classValidator',
-      'May 2019',
-      'December 2020',
-      'Blockly.Field.prototype.doClassValidation_');
-  return text;
-};
-
-/**
- * Calls the validation function for this field, as well as all the validation
- * function for the field's class and its parents.
- * @param {string} text Proposed text.
- * @return {?string} Revised text, or null if invalid.
- * @deprecated May 2019. setValue now contains all relevant logic.
- */
-Blockly.Field.prototype.callValidator = function(text) {
-  Blockly.utils.deprecation.warn(
-      'Field.prototype.callValidator',
-      'May 2019',
-      'December 2020');
-  var classResult = this.classValidator(text);
-  if (classResult === null) {
-    // Class validator rejects value.  Game over.
-    return null;
-  } else if (classResult !== undefined) {
-    text = classResult;
-  }
-  var userValidator = this.getValidator();
-  if (userValidator) {
-    var userResult = userValidator.call(this, text);
-    if (userResult === null) {
-      // User validator rejects value.  Game over.
-      return null;
-    } else if (userResult !== undefined) {
-      text = userResult;
-    }
-  }
-  return text;
 };
 
 /**
@@ -622,22 +584,6 @@ Blockly.Field.prototype.showEditor = function(opt_e) {
   if (this.isClickable()) {
     this.showEditor_(opt_e);
   }
-};
-
-/**
- * Updates the width of the field. Redirects to updateSize_().
- * @deprecated May 2019  Use Blockly.Field.updateSize_() to force an update
- * to the size of the field, or Blockly.utils.dom.getTextWidth() to
- * check the size of the field.
- */
-Blockly.Field.prototype.updateWidth = function() {
-
-  Blockly.utils.deprecation.warn(
-      'Field.prototype.updateWidth',
-      'May 2019',
-      'December 2020',
-      'Blockly.Field.prototype.updateSize_ or Blockly.utils.dom.getTextWidth');
-  this.updateSize_();
 };
 
 /**
@@ -818,20 +764,6 @@ Blockly.Field.prototype.getText = function() {
 };
 
 /**
- * Set the text in this field.  Trigger a rerender of the source block.
- * @param {*} _newText New text.
- * @deprecated 2019 setText should not be used directly. Use setValue instead.
- */
-Blockly.Field.prototype.setText = function(_newText) {
-  Blockly.utils.deprecation.warn(
-      'Field.prototype.setText',
-      'May 2019',
-      'December 2020',
-      'Blockly.Field.prototype.setValue');
-  throw Error('setText method is deprecated');
-};
-
-/**
  * Force a rerender of the block that this field is installed on, which will
  * rerender this field and adjust for any sizing changes.
  * Other fields on the same block will not rerender, because their sizes have
@@ -898,12 +830,13 @@ Blockly.Field.prototype.setValue = function(newValue) {
   }
   var oldValue = this.getValue();
   if (oldValue === newValue) {
-    doLogging && console.log('same, return');
+    doLogging && console.log('same, doValueUpdate_, return');
+    this.doValueUpdate_(newValue);
     return;
   }
 
   if (source && Blockly.Events.isEnabled()) {
-    Blockly.Events.fire(new Blockly.Events.BlockChange(
+    Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_CHANGE))(
         source, 'field', this.name || null, oldValue, newValue));
   }
   this.doValueUpdate_(newValue);
@@ -949,14 +882,11 @@ Blockly.Field.prototype.getValue = function() {
  * @param {*=} opt_newValue The value to be validated.
  * @return {*} The validated value, same as input by default.
  * @protected
- * @suppress {deprecated} Suppress deprecated this.classValidator call.
  */
 Blockly.Field.prototype.doClassValidation_ = function(opt_newValue) {
   if (opt_newValue === null || opt_newValue === undefined) {
     return null;
   }
-  // For backwards compatibility.
-  opt_newValue = this.classValidator(/** @type {string} */ (opt_newValue));
   return opt_newValue;
 };
 
@@ -1019,7 +949,7 @@ Blockly.Field.prototype.setTooltip = function(newTip) {
 
 /**
  * Returns the tooltip text for this field.
- * @returns {string} The tooltip text for this field.
+ * @return {string} The tooltip text for this field.
  */
 Blockly.Field.prototype.getTooltip = function() {
   var clickTarget = this.getClickTarget_();
@@ -1104,19 +1034,18 @@ Blockly.Field.prototype.isTabNavigable = function() {
 };
 
 /**
- * Handles the given action.
- * This is only triggered when keyboard accessibility mode is enabled.
- * @param {!Blockly.Action} _action The action to be handled.
- * @return {boolean} True if the field handled the action, false otherwise.
- * @package
+ * Handles the given keyboard shortcut.
+ * @param {!Blockly.ShortcutRegistry.KeyboardShortcut} _shortcut The shortcut to be handled.
+ * @return {boolean} True if the shortcut has been handled, false otherwise.
+ * @public
  */
-Blockly.Field.prototype.onBlocklyAction = function(_action) {
+Blockly.Field.prototype.onShortcut = function(_shortcut) {
   return false;
 };
 
 /**
- * Add the cursor svg to this fields svg group.
- * @param {SVGElement} cursorSvg The svg root of the cursor to be added to the
+ * Add the cursor SVG to this fields SVG group.
+ * @param {SVGElement} cursorSvg The SVG root of the cursor to be added to the
  *     field group.
  * @package
  */
@@ -1131,8 +1060,8 @@ Blockly.Field.prototype.setCursorSvg = function(cursorSvg) {
 };
 
 /**
- * Add the marker svg to this fields svg group.
- * @param {SVGElement} markerSvg The svg root of the marker to be added to the
+ * Add the marker SVG to this fields SVG group.
+ * @param {SVGElement} markerSvg The SVG root of the marker to be added to the
  *     field group.
  * @package
  */
@@ -1157,6 +1086,7 @@ Blockly.Field.prototype.updateMarkers_ = function() {
     workspace.getCursor().draw();
   }
   if (workspace.keyboardAccessibilityMode && this.markerSvg_) {
-    workspace.getMarker(Blockly.navigation.MARKER_NAME).draw();
+    // TODO(#4592): Update all markers on the field.
+    workspace.getMarker(Blockly.MarkerManager.LOCAL_MARKER).draw();
   }
 };

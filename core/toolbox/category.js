@@ -12,17 +12,17 @@
 
 goog.provide('Blockly.ToolboxCategory');
 
+goog.require('Blockly.ISelectableToolboxItem');
 goog.require('Blockly.registry');
+goog.require('Blockly.ToolboxItem');
 goog.require('Blockly.utils');
 goog.require('Blockly.utils.aria');
 goog.require('Blockly.utils.dom');
 goog.require('Blockly.utils.object');
 goog.require('Blockly.utils.toolbox');
-goog.require('Blockly.ToolboxItem');
 
 goog.requireType('Blockly.ICollapsibleToolboxItem');
 goog.requireType('Blockly.IToolbox');
-goog.requireType('Blockly.IToolboxItem');
 
 
 /**
@@ -83,6 +83,13 @@ Blockly.ToolboxCategory = function(categoryDef, toolbox, opt_parent) {
   this.iconDom_ = null;
 
   /**
+   * The html element for the toolbox label.
+   * @type {?Element}
+   * @protected
+   */
+  this.labelDom_ = null;
+
+  /**
    * All the css class names that are used to create a category.
    * @type {!Blockly.ToolboxCategory.CssConfig}
    * @protected
@@ -119,16 +126,16 @@ Blockly.ToolboxCategory = function(categoryDef, toolbox, opt_parent) {
 Blockly.utils.object.inherits(Blockly.ToolboxCategory, Blockly.ToolboxItem);
 
 /**
- * All the css class names that are used to create a category.
+ * All the CSS class names that are used to create a category.
  * @typedef {{
- *            container:?string,
- *            row:?string,
- *            rowcontentcontainer:?string,
- *            icon:?string,
- *            label:?string,
- *            selected:?string,
- *            openicon:?string,
- *            closedicon:?string
+ *            container:(string|undefined),
+ *            row:(string|undefined),
+ *            rowcontentcontainer:(string|undefined),
+ *            icon:(string|undefined),
+ *            label:(string|undefined),
+ *            selected:(string|undefined),
+ *            openicon:(string|undefined),
+ *            closedicon:(string|undefined)
  *          }}
  */
 Blockly.ToolboxCategory.CssConfig;
@@ -209,7 +216,7 @@ Blockly.ToolboxCategory.prototype.init = function() {
 };
 
 /**
- * Creates the dom for the category.
+ * Creates the DOM for the category.
  * @return {!Element} The parent element for the category.
  * @protected
  */
@@ -222,7 +229,6 @@ Blockly.ToolboxCategory.prototype.createDom_ = function() {
       Blockly.utils.aria.State.LEVEL, this.level_);
 
   this.rowDiv_ = this.createRowContainer_();
-  this.rowDiv_.setAttribute('id', this.id_);
   this.rowDiv_.style.pointerEvents = 'auto';
   this.htmlDiv_.appendChild(this.rowDiv_);
 
@@ -234,10 +240,10 @@ Blockly.ToolboxCategory.prototype.createDom_ = function() {
   Blockly.utils.aria.setRole(this.iconDom_, Blockly.utils.aria.Role.PRESENTATION);
   this.rowContents_.appendChild(this.iconDom_);
 
-  var labelDom = this.createLabelDom_(this.name_);
-  this.rowContents_.appendChild(labelDom);
+  this.labelDom_ = this.createLabelDom_(this.name_);
+  this.rowContents_.appendChild(this.labelDom_);
   Blockly.utils.aria.setState(/** @type {!Element} */ (this.htmlDiv_),
-      Blockly.utils.aria.State.LABELLEDBY, labelDom.getAttribute('id'));
+      Blockly.utils.aria.State.LABELLEDBY, this.labelDom_.getAttribute('id'));
 
   this.addColourBorder_(this.colour_);
 
@@ -300,7 +306,7 @@ Blockly.ToolboxCategory.prototype.createIconDom_ = function() {
 
 /**
  * Creates the span that holds the category label.
- * This should have an id for accessibility purposes.
+ * This should have an ID for accessibility purposes.
  * @param {string} name The name of the category.
  * @return {!Element} The span that holds the category label.
  * @protected
@@ -381,6 +387,17 @@ Blockly.ToolboxCategory.prototype.getColourfromStyle_ = function(styleName) {
     }
   }
   return '';
+};
+
+/**
+ * Gets the HTML element that is clickable.
+ * The parent toolbox element receives clicks. The parent toolbox will add an ID
+ * to this element so it can pass the onClick event to the correct toolboxItem.
+ * @return {!Element} The HTML element that receives clicks.
+ * @public
+ */
+Blockly.ToolboxCategory.prototype.getClickTarget = function() {
+  return /** @type {!Element} */(this.rowDiv_);
 };
 
 /**

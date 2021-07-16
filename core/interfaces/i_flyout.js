@@ -15,7 +15,6 @@ goog.provide('Blockly.IFlyout');
 
 goog.requireType('Blockly.BlockSvg');
 goog.requireType('Blockly.IRegistrable');
-goog.requireType('Blockly.utils.dom');
 goog.requireType('Blockly.utils.Coordinate');
 goog.requireType('Blockly.utils.Svg');
 goog.requireType('Blockly.utils.toolbox');
@@ -160,6 +159,18 @@ Blockly.IFlyout.prototype.reflow;
  *     dragging.
  */
 Blockly.IFlyout.prototype.isScrollable;
+
+/**
+ * Calculates the x coordinate for the flyout position.
+ * @return {number} X coordinate.
+ */
+Blockly.IFlyout.prototype.getX;
+
+/**
+ * Calculates the y coordinate for the flyout position.
+ * @return {number} Y coordinate.
+ */
+Blockly.IFlyout.prototype.getY;
 
 /**
  * Position the flyout.
